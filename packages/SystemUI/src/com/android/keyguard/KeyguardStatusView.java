@@ -36,12 +36,8 @@ import android.graphics.Typeface;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.graphics.PorterDuff.Mode;
-import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.UserHandle;
 import android.provider.Settings;
-import android.service.dreams.DreamService;
-import android.service.dreams.IDreamManager;
 import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
@@ -58,6 +54,7 @@ import android.widget.TextView;
 import com.android.internal.util.ArrayUtils;
 import com.android.internal.widget.LockPatternUtils;
 import com.android.systemui.ChargingView;
+import com.android.systemui.doze.DozeLog;
 import com.android.systemui.statusbar.policy.DateView;
 
 import java.util.Locale;
@@ -104,6 +101,8 @@ public class KeyguardStatusView extends GridLayout implements
     private int hideMode;
     private boolean showLocation;
     private SettingsObserver mSettingsObserver;
+
+    private boolean mForcedMediaDoze;
 
     private KeyguardUpdateMonitorCallback mInfoCallback = new KeyguardUpdateMonitorCallback() {
 
@@ -358,7 +357,6 @@ public class KeyguardStatusView extends GridLayout implements
                         mWeatherClient.getWeatherConditionImage(mWeatherData.conditionCode));
                     mWeatherCurrentTemp.setText(mWeatherData.temp + mWeatherData.tempUnits);
                     mWeatherConditionText.setText(mWeatherData.condition);
-                    mWeatherView.setVisibility(mShowWeather ? View.VISIBLE : View.GONE);
                     updateSettings();
                 } else {
                     mWeatherCity.setText(null);
@@ -370,23 +368,6 @@ public class KeyguardStatusView extends GridLayout implements
           } catch(Exception e) {
             // Do nothing
        }
-    }
-
-    private boolean isDozeMode() {
-        IDreamManager dreamManager = getDreamManager();
-        try {
-            if (dreamManager != null && dreamManager.isDozing()) {
-                return true;
-            }
-        } catch (RemoteException e) {
-            return false;
-        }
-        return false;
-    }
-
-    static IDreamManager getDreamManager() {
-        return IDreamManager.Stub.asInterface(
-                ServiceManager.checkService(DreamService.DREAM_SERVICE));
     }
 
     private void updateSettings() {
@@ -402,7 +383,7 @@ public class KeyguardStatusView extends GridLayout implements
         }
         if (mWeatherView != null) {
             mWeatherView.setVisibility(
-                (mShowWeather && ConditionText && !isDozeMode() ? View.VISIBLE : View.GONE));
+                (mShowWeather && ConditionText ? View.VISIBLE : View.GONE));
         }
         if (weatherPanel != null) {
             weatherPanel.setVisibility(View.VISIBLE);
@@ -470,7 +451,7 @@ public class KeyguardStatusView extends GridLayout implements
         final int N = mClockContainer.getChildCount();
         for (int i = 0; i < N; i++) {
             View child = mClockContainer.getChildAt(i);
-            if (ArrayUtils.contains(mVisibleInDoze, child)) {
+            if (!mForcedMediaDoze && ArrayUtils.contains(mVisibleInDoze, child)) {
                 continue;
             }
             child.setAlpha(dark ? 0 : 1);
@@ -486,16 +467,26 @@ public class KeyguardStatusView extends GridLayout implements
         int blendedAlarmColor = ColorUtils.blendARGB(mAlarmTextColor, Color.WHITE, darkAmount);
         mAlarmStatusView.setTextColor(blendedAlarmColor);
         mAlarmStatusView.setCompoundDrawableTintList(ColorStateList.valueOf(blendedAlarmColor));
+        mWeatherView.setAlpha(dark ? 0 : 1);
     }
 
     public void setPulsing(boolean pulsing) {
         mPulsing = pulsing;
+    }
+
+    public void setCleanLayout(int reason) {
+        mForcedMediaDoze =
+                reason == DozeLog.PULSE_REASON_FORCED_MEDIA_NOTIFICATION;
         updateDozeVisibleViews();
     }
 
     private void updateDozeVisibleViews() {
         for (View child : mVisibleInDoze) {
-            child.setAlpha(mDarkAmount == 1 && mPulsing ? 0.8f : 1);
+            if (!mForcedMediaDoze) {
+                child.setAlpha(mDarkAmount == 1 && mPulsing ? 0.8f : 1);
+            } else {
+                child.setAlpha(mDarkAmount == 1 ? 0 : 1);
+            }
         }
     }
 
