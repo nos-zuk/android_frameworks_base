@@ -16,6 +16,7 @@
 
 package com.android.systemui.qs.tiles;
 
+import android.content.DialogInterface;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.Context;
@@ -23,16 +24,16 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.ContentObserver;
 import android.net.Uri;
-import android.os.CountDownTimer;
 import android.os.PowerManager;
-import android.os.SystemClock;
 import android.provider.Settings;
 import android.service.quicksettings.Tile;
 import com.android.internal.logging.nano.MetricsProto.MetricsEvent;
+import com.android.systemui.Prefs;
+import com.android.systemui.R;
 import com.android.systemui.qs.QSHost;
 import com.android.systemui.plugins.qs.QSTile.BooleanState;
 import com.android.systemui.qs.tileimpl.QSTileImpl;
-import com.android.systemui.R;
+import com.android.systemui.statusbar.phone.SystemUIDialog;
 
 /** Quick settings tile: Caffeine **/
 public class CaffeineTile extends QSTileImpl<BooleanState> {
@@ -40,16 +41,6 @@ public class CaffeineTile extends QSTileImpl<BooleanState> {
     private final Icon mIcon = ResourceIcon.get(R.drawable.ic_qs_caffeine_on);
 
     private final PowerManager.WakeLock mWakeLock;
-    private int mSecondsRemaining;
-    private int mDuration;
-    private static int[] DURATIONS = new int[] {
-        5 * 60,   // 5 min
-        10 * 60,  // 10 min
-        30 * 60,  // 30 min
-        -1,       // infinity
-    };
-    private CountDownTimer mCountdownTimer = null;
-    public long mLastClickTime = -1;
     private final Receiver mReceiver = new Receiver();
 
     public CaffeineTile(QSHost host) {
@@ -65,17 +56,12 @@ public class CaffeineTile extends QSTileImpl<BooleanState> {
     }
 
     @Override
-    public void handleSetListening(boolean listening) {
-    }
-
-    @Override
     protected void handleDestroy() {
         super.handleDestroy();
-        stopCountDown();
         mReceiver.destroy();
-      if (mWakeLock.isHeld()) {
+        if (mWakeLock.isHeld()) {
             mWakeLock.release();
-      }
+        }
     }
 
     @Override
@@ -89,109 +75,42 @@ public class CaffeineTile extends QSTileImpl<BooleanState> {
     }
 
     @Override
+    public void handleSetListening(boolean listening) {}
+
+    @Override
     public void handleClick() {
-        // If last user clicks < 5 seconds
-        // we cycle different duration
-        // otherwise toggle on/off
-        if (mWakeLock.isHeld() && (mLastClickTime != -1) &&
-                (SystemClock.elapsedRealtime() - mLastClickTime < 5000)) {
-            // cycle duration
-            mDuration++;
-            if (mDuration >= DURATIONS.length) {
-                // all durations cycled, turn if off
-                mDuration = -1;
-                stopCountDown();
-                if (mWakeLock.isHeld()) {
-                    mWakeLock.release();
-                }
-            } else {
-                // change duration
-                startCountDown(DURATIONS[mDuration]);
-                if (!mWakeLock.isHeld()) {
-                    mWakeLock.acquire();
-                }
-            }
-        } else {
-            // toggle
-            if (mWakeLock.isHeld()) {
-                mWakeLock.release();
-                stopCountDown();
-            } else {
-                mWakeLock.acquire();
-                mDuration = 0;
-                startCountDown(DURATIONS[mDuration]);
-            }
+        if (Prefs.getBoolean(mContext, Prefs.Key.QS_CAFFEINE_DIALOG_SHOWN, false)) {
+            drinkUp();
+            return;
         }
-        mLastClickTime = SystemClock.elapsedRealtime();
+        SystemUIDialog dialog = new SystemUIDialog(mContext);
+        dialog.setTitle(R.string.caffeine_info_title);
+        dialog.setMessage(R.string.caffeine_info_message);
+        dialog.setPositiveButton(com.android.internal.R.string.ok,
+                new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        drinkUp();
+                        Prefs.putBoolean(mContext, Prefs.Key.QS_CAFFEINE_DIALOG_SHOWN, true);
+                    }
+                });
+        dialog.setShowForAllUsers(true);
+        dialog.show();
+    }
+
+    public void drinkUp() {
+        if (mWakeLock.isHeld()) {
+            mWakeLock.release();
+        } else {
+            mWakeLock.acquire();
+        }
         refreshState();
     }
 
     @Override
-    public void handleLongClick() {
-        setCpuInfoEnabled();
-    }
-
-    @Override
     public Intent getLongClickIntent() {
-        return  null;
-    }
-
-    private boolean setCpuInfoEnabled() {
-        boolean enabled = Settings.Global.getInt(mContext.getContentResolver(),
-                Settings.Global.SHOW_CPU_OVERLAY, 1) != 0;
-        Intent service = (new Intent())
-                .setClassName("com.android.systemui",
-                "com.android.systemui.CPUInfoService");
-        if (!enabled) {
-            Settings.Global.putInt(
-                mContext.getContentResolver(), Settings.Global.SHOW_CPU_OVERLAY, 1);
-            mContext.startService(service);
-        } else {
-            Settings.Global.putInt(
-                mContext.getContentResolver(), Settings.Global.SHOW_CPU_OVERLAY, 0);
-            mContext.stopService(service);
-        }
-        return enabled;
-    }
-
-    private void startCountDown(long duration) {
-        stopCountDown();
-        mSecondsRemaining = (int)duration;
-        if (duration == -1) {
-            // infinity timing, no need to start timer
-            return;
-        }
-        mCountdownTimer = new CountDownTimer(duration * 1000, 1000) {
-
-            @Override
-            public void onTick(long millisUntilFinished) {
-                mSecondsRemaining = (int) (millisUntilFinished / 1000);
-                refreshState();
-            }
-
-            @Override
-            public void onFinish() {
-                if (mWakeLock.isHeld())
-                    mWakeLock.release();
-                refreshState();
-            }
-
-        }.start();
-    }
-
-    private void stopCountDown() {
-        if (mCountdownTimer != null) {
-            mCountdownTimer.cancel();
-            mCountdownTimer = null;
-        }
-    }
-
-    private String formatValueWithRemainingTime() {
-        if (mSecondsRemaining == -1) {
-            return "\u221E"; // infinity
-        }
-        return String.format("%02d:%02d",
-                        mSecondsRemaining / 60 % 60, mSecondsRemaining % 60);
+        return new Intent().setComponent(new ComponentName(
+            "com.android.settings", "com.android.settings.Settings$DisplaySettingsActivity"));
     }
 
     @Override
@@ -201,14 +120,13 @@ public class CaffeineTile extends QSTileImpl<BooleanState> {
         }
         state.icon = mIcon;
         state.value = mWakeLock.isHeld();
+        state.label = mContext.getString(R.string.quick_settings_caffeine_label);
         if (state.value) {
-            state.label = formatValueWithRemainingTime();
             state.slash.isSlashed = false;
             state.contentDescription =  mContext.getString(
                     R.string.accessibility_quick_settings_caffeine_on);
             state.state = Tile.STATE_ACTIVE;
         } else {
-            state.label = mContext.getString(R.string.quick_settings_caffeine_label);
             state.slash.isSlashed = true;
             state.contentDescription =  mContext.getString(
                     R.string.accessibility_quick_settings_caffeine_off);
@@ -233,9 +151,9 @@ public class CaffeineTile extends QSTileImpl<BooleanState> {
             String action = intent.getAction();
             if (Intent.ACTION_SCREEN_OFF.equals(action)) {
                 // disable caffeine if user force off (power button)
-                stopCountDown();
-                if (mWakeLock.isHeld())
+                if (mWakeLock.isHeld()) {
                     mWakeLock.release();
+                }
                 refreshState();
             }
         }
