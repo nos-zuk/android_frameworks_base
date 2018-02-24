@@ -3966,13 +3966,11 @@ public final class Settings {
         /**
          * Setting to determine whether or not to show the battery percentage in the status bar.
          *    0 - Don't show percentage
-         *    1 - Show percentage
+         *    1 - Show percentage outside
+         *    2 - Show percentage inside
          * @hide
          */
         public static final String SHOW_BATTERY_PERCENT = "status_bar_show_battery_percent";
-
-        /** @hide */
-        private static final Validator SHOW_BATTERY_PERCENT_VALIDATOR = sBooleanValidator;
 
         /**
         * Whether to show Qs panel footer warnings like for active VPN
@@ -4159,11 +4157,6 @@ public final class Settings {
          * @hide
          */
         public static final String QS_ROWS_LANDSCAPE = "qs_rows_landscape";
-
-        /**
-         * @hide
-         */
-        public static final String SHOW_BATTERY_IMAGE = "status_bar_show_battery_image";
 
         /**
          * How many columns to show in the qs panel when in portrait
@@ -4458,6 +4451,95 @@ public final class Settings {
         public static final String ACCELEROMETER_ROTATION_ANGLES = "accelerometer_rotation_angles";
 
         /**
+         * Show or hide clock
+         * 0 - hide
+         * 1 - show (default)
+         * @hide
+         */
+        public static final String STATUS_BAR_CLOCK = "status_bar_clock";
+
+        /** @hide */
+        public static final Validator STATUS_BAR_CLOCK_VALIDATOR =
+                sBooleanValidator;
+
+        /**
+         * Style of clock
+         * 0 - Right Clock  (default)
+         * 1 - Center Clock
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_STYLE = "statusbar_clock_style";
+
+        /** @hide */
+        public static final Validator STATUSBAR_CLOCK_STYLE_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 1);
+
+        /**
+         * Whether to show seconds next to clock in status bar
+         * 0 - hide (default)
+         * 1 - show
+         * @hide
+         */
+        public static final String STATUS_BAR_CLOCK_SECONDS = "status_bar_clock_seconds";
+
+        /** @hide */
+        public static final Validator STATUS_BAR_CLOCK_SECONDS_VALIDATOR =
+                sBooleanValidator;
+
+        /**
+         * AM/PM Style for clock options
+         * 0 - Normal AM/PM
+         * 1 - Small AM/PM
+         * 2 - No AM/PM  (default)
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_AM_PM_STYLE = "statusbar_clock_am_pm_style";
+
+        /** @hide */
+        public static final Validator STATUSBAR_CLOCK_AM_PM_STYLE_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 2);
+
+        /**
+         * Shows custom date before clock time
+         * 0 - No Date
+         * 1 - Small Date
+         * 2 - Normal Date
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_DATE_DISPLAY = "statusbar_clock_date_display";
+
+        /** @hide */
+        public static final Validator STATUSBAR_CLOCK_DATE_DISPLAY_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 2);
+
+        /**
+         * Sets the date string style
+         * 0 - Regular style
+         * 1 - Lowercase
+         * 2 - Uppercase
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_DATE_STYLE = "statusbar_clock_date_style";
+
+        /** @hide */
+        public static final Validator STATUSBAR_CLOCK_DATE_STYLE_VALIDATOR =
+                new InclusiveIntegerRangeValidator(0, 2);
+
+        /**
+         * Stores the java DateFormat string for the date
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_DATE_FORMAT = "statusbar_clock_date_format";
+
+        /**
+         * Position of date
+         * 0 - Left of clock
+         * 1 - Right of clock
+         * @hide
+         */
+        public static final String STATUSBAR_CLOCK_DATE_POSITION = "statusbar_clock_date_position";
+
+        /**
          * Settings to backup. This is here so that it's in the same place as the settings
          * keys and easy to update.
          *
@@ -4513,7 +4595,14 @@ public final class Settings {
             LOCK_TO_APP_ENABLED,
             NOTIFICATION_SOUND,
             ACCELEROMETER_ROTATION,
-            SHOW_BATTERY_PERCENT
+            SHOW_BATTERY_PERCENT,
+            STATUS_BAR_CLOCK,
+            STATUSBAR_CLOCK_STYLE,
+            STATUS_BAR_CLOCK_SECONDS,
+            STATUSBAR_CLOCK_AM_PM_STYLE,
+            STATUSBAR_CLOCK_DATE_DISPLAY,
+            STATUSBAR_CLOCK_DATE_STYLE,
+            STATUSBAR_CLOCK_DATE_FORMAT
         };
 
         /**
@@ -4623,6 +4712,13 @@ public final class Settings {
             PRIVATE_SETTINGS.add(LOCK_TO_APP_ENABLED);
             PRIVATE_SETTINGS.add(EGG_MODE);
             PRIVATE_SETTINGS.add(SHOW_BATTERY_PERCENT);
+            PRIVATE_SETTINGS.add(STATUS_BAR_CLOCK);
+            PRIVATE_SETTINGS.add(STATUSBAR_CLOCK_STYLE);
+            PRIVATE_SETTINGS.add(STATUS_BAR_CLOCK_SECONDS);
+            PRIVATE_SETTINGS.add(STATUSBAR_CLOCK_AM_PM_STYLE);
+            PRIVATE_SETTINGS.add(STATUSBAR_CLOCK_DATE_DISPLAY);
+            PRIVATE_SETTINGS.add(STATUSBAR_CLOCK_DATE_STYLE);
+            PRIVATE_SETTINGS.add(STATUSBAR_CLOCK_DATE_FORMAT);
         }
 
         /**
@@ -4700,7 +4796,12 @@ public final class Settings {
             VALIDATORS.put(WIFI_STATIC_NETMASK, WIFI_STATIC_NETMASK_VALIDATOR);
             VALIDATORS.put(WIFI_STATIC_DNS1, WIFI_STATIC_DNS1_VALIDATOR);
             VALIDATORS.put(WIFI_STATIC_DNS2, WIFI_STATIC_DNS2_VALIDATOR);
-            VALIDATORS.put(SHOW_BATTERY_PERCENT, SHOW_BATTERY_PERCENT_VALIDATOR);
+            VALIDATORS.put(STATUS_BAR_CLOCK, STATUS_BAR_CLOCK_VALIDATOR);
+            VALIDATORS.put(STATUSBAR_CLOCK_STYLE, STATUSBAR_CLOCK_STYLE_VALIDATOR);
+            VALIDATORS.put(STATUS_BAR_CLOCK_SECONDS, STATUS_BAR_CLOCK_SECONDS_VALIDATOR);
+            VALIDATORS.put(STATUSBAR_CLOCK_AM_PM_STYLE, STATUSBAR_CLOCK_AM_PM_STYLE_VALIDATOR);
+            VALIDATORS.put(STATUSBAR_CLOCK_DATE_DISPLAY, STATUSBAR_CLOCK_DATE_DISPLAY_VALIDATOR);
+            VALIDATORS.put(STATUSBAR_CLOCK_DATE_STYLE, STATUSBAR_CLOCK_DATE_STYLE_VALIDATOR);
         }
 
         /**
@@ -7978,6 +8079,21 @@ public final class Settings {
          * @hide
          */
         public static final String FACE_AUTO_UNLOCK = "face_auto_unlock";
+
+        /**
+         * Display style of the status bar battery information
+         * 0: Display the battery an icon in portrait mode
+         * 1: Display the battery an icon in landscape mode
+         * 2: Display the battery as a circle
+         * 3: Display the battery as a dotted circle
+         * 4: Display the battery as a big circle and show level into the icon
+         * 5: Display the battery as a big dotted circle and show level into the icon
+         * 6: Display the battery as text
+         * 7: Do not display the battery
+         * default: 0
+         * @hide
+         */
+        public static final String STATUS_BAR_BATTERY_STYLE = "status_bar_battery_style";
 
         /**
          * This are the settings to be backed up.
